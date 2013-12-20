@@ -7,9 +7,6 @@ using System.Linq;
 
 public class DistanceField : MonoBehaviour {
 	public GameObject targetObj;
-	public Bounds boundingBox;
-	public int nCells;
-	public Vector3[,,] forceField;
 	
 	private Vector2[][] triVertsInLocal;
 	private Matrix4x4[] transTriSpaces;
