@@ -1,61 +1,106 @@
 using UnityEngine;
 using System.Collections;
+using System.Diagnostics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 public class DistanceField : MonoBehaviour {
+	public GameObject targetObj;
+	public Bounds boundingBox;
+	public int nCells;
+	public Vector3[,,] forceField;
+	
+	private Vector2[][] triVertsInLocal;
+	private Matrix4x4[] transTriSpaces;
+	private Matrix4x4[] transTriSpacesInv;
+	private Vector3 dxInv;
 
 	// Use this for initialization
 	void Start () {
-		Vector3[] triInWorld = new Vector3[]{
-			new Vector3(1f, 0f, 1f),
-			new Vector3(2f, 0f, 1f),
-			new Vector3(1f, 0f, 2f) };
-		Matrix4x4 w2l = convertIn2D(triInWorld);
-		Vector3[] triIn2d = new Vector3[]{
-			w2l.MultiplyPoint3x4(triInWorld[0]),
-			w2l.MultiplyPoint3x4(triInWorld[1]),
-			w2l.MultiplyPoint3x4(triInWorld[2]) };
+		MeshFilter targetMeshFlt = (MeshFilter)targetObj.GetComponent("MeshFilter");
+		Mesh targetMesh = targetMeshFlt.mesh;
+		Transform targetTrans = targetObj.transform;
+		Vector3[] verticesInWorld = (from v in targetMesh.vertices select targetTrans.TransformPoint(v)).ToArray();
+		int[] triIndices = targetMesh.triangles;
+		Vector3[][] triangles = (from tri in (from i in Enumerable.Range(0, triIndices.Length / 3) select 
+			new Vector3[]{ 
+				verticesInWorld[triIndices[3*i]],
+				verticesInWorld[triIndices[3*i+1]],
+				verticesInWorld[triIndices[3*i+2]] }) where Vector3.Cross(tri[1]-tri[0], tri[2]-tri[0]).sqrMagnitude > Mathf.Epsilon select tri).ToArray();
+		this.transTriSpaces = (from tri in triangles select calcTriangleSpace(tri)).ToArray();
+		this.transTriSpacesInv = (from m in transTriSpaces select m.inverse).ToArray();
+		this.triVertsInLocal = (from i in Enumerable.Range(0, transTriSpaces.Length) select
+			new Vector2[]{
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][0]),
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][1]),
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][2]) }).ToArray();
 	}
-	
-	// Update is called once per frame
-	void Update () {
-	
-	}
-	
-	public Matrix4x4 convertIn2D(Vector3[] triVerts) {
+
+	public Matrix4x4 calcTriangleSpace(Vector3[] triVerts) {
 		Vector3 pos = triVerts[0];
 		Vector3 edge01 = triVerts[1] - triVerts[0];
 		Vector3 edge02 = triVerts[2] - triVerts[0];
-		Vector3 z = edge02.normalized;
-		Vector3 x = Vector3.Cross(edge01, z).normalized;
+		Vector3 x = edge01.normalized;
+		Vector3 z = Vector3.Cross(x, edge02).normalized;
 		Vector3 y = Vector3.Cross(z, x);
 		
 		Matrix4x4 local2world = Matrix4x4.TRS(pos, Quaternion.LookRotation(z, y), Vector3.one);
 		return local2world.inverse;
 	}
 	
-	public Vector3 distance(Vector3 point, Matrix4x4 m2d, Vector2[] triIn2d) {
-		Vector3 pInLocal = m2d.MultiplyPoint3x4(point);
-		Vector2 pIn2d = new Vector3(0, pInLocal.y, pInLocal.z);
-		Vector2 edge13 = triIn2d[2] - triIn2d[0];
-		Vector2 edge32 = triIn2d[1] - triIn2d[2];
-		Vector2 edge21 = triIn2d[0] - triIn2d[1];
+	public Vector4 distance(Vector3 point) {
+		float minSqrMagnitude = Mathf.Infinity;
+		Vector3 minDist = Vector3.zero;
+		int iMin = -1;
+		for (int i = 0; i < triVertsInLocal.Length; i++) {
+			Vector2[] triangle = triVertsInLocal[i];
+			Matrix4x4 m = transTriSpaces[i];
+			Vector3 pointInLocal = m.MultiplyPoint3x4(point);
+			Vector3 tmpDist = distanceInLocal(pointInLocal, triangle);
+			float tmpSqrMag = tmpDist.sqrMagnitude;
+			if (tmpSqrMag < minSqrMagnitude) {
+				minSqrMagnitude = tmpSqrMag;
+				minDist = tmpDist;
+				iMin = i;
+			}
+		}
+		Vector4 distInWorld = transTriSpacesInv[iMin].MultiplyVector(minDist);
+		distInWorld.w = -minDist.z;
+		return distInWorld;
+	}
+	public Vector3 distanceInLocal(Vector3 pointInLocal, Vector2[] triIn2d) {
+		Vector2 pIn2d = new Vector3(pointInLocal.x, pointInLocal.y, 0);
+		Vector2[] edges = new Vector2[]{
+			triIn2d[1] - triIn2d[0],
+			triIn2d[2] - triIn2d[1],
+			triIn2d[0] - triIn2d[2] };
+		Vector2[] ps = new Vector2[]{
+			pIn2d - triIn2d[0],
+			pIn2d - triIn2d[1],
+			pIn2d - triIn2d[2] };
 		
-		Vector2 v1p = pIn2d - triIn2d[0];
-		Vector2 v2p = pIn2d - triIn2d[1];
-		Vector2 v3p = pIn2d - triIn2d[2];
-		
-		if (det(v1p, edge13) <= 0) {
-			if (det(v3p, edge32) <= 0) {
-				if (det(v2p, edge21) <= 0) {
-				} else {
-				}
-			} else {}
-		} else {}				
-		
-		return Vector3.zero;
+		Vector3 p2tri;
+		for (int i = 0; i < 3; i++) {
+			if (det(edges[i], ps[i]) < 0) {
+				float lenEdge = edges[i].magnitude;
+				Vector2 dirEdge = edges[i] / lenEdge;
+				float t = Vector2.Dot(ps[i], dirEdge);
+				if (t < 0)
+					p2tri = (Vector3)triIn2d[i % 3] - pointInLocal;
+				else if (t <= lenEdge)
+					p2tri = (Vector3)(t * dirEdge + triIn2d[i]) - pointInLocal;
+				else
+					p2tri = (Vector3)triIn2d[(i + 1) % 3] - pointInLocal;
+				return p2tri;
+			}
+		}
+		p2tri = new Vector3(0, 0, -pointInLocal.z);
+		return p2tri;
 	}
 			
 	public float det(Vector2 p, Vector2 e) {
 		return p.x * e.y - p.y * e.x;
 	}
+
 }
