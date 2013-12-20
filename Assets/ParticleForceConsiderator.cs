@@ -1,23 +1,19 @@
 using UnityEngine;
 using System.Collections;
+using System.Text;
 
 public class ParticleForceConsiderator : MonoBehaviour {
-	public int initNumParticles = 1000;
 	public DistanceField distField;
 	public float coeffForceDist = 1f;
-	public float coeffForceViscous = 0.5f;
-	public float mass = 1f;
 	
 	private ParticleSystem.Particle[] _particles;
 	private ParticleSystem _system;
-	private float _massInv;
 	private float _log2Inv;
 	
 	// Use this for initialization
 	void Start () {
-		this._particles = new ParticleSystem.Particle[initNumParticles];
+		this._particles = new ParticleSystem.Particle[0];
 		this._system = particleSystem;
-		this._massInv = 1f / mass;
 		this._log2Inv = 1f / Mathf.Log10(2);
 	}
 	
@@ -33,11 +29,12 @@ public class ParticleForceConsiderator : MonoBehaviour {
 
 		for (int i = 0; i < nParticles; i++) {
 			ParticleSystem.Particle p = _particles[i];
-			Vector4 dist = coeffForceDist * distField.distance(p.position);
-			Vector3 forceDist = (dist.w > 0 ? (Vector3)dist : Vector3.zero);
+			Vector4 dist = distField.distance(p.position);
+			Vector3 forceDist = (dist.w > 0 ? coeffForceDist * (Vector3)dist : Vector3.zero);
 			Vector3 force = forceDist;
-			Vector3 accel = _massInv * force;
-			_particles[i].velocity += dt * accel;
+			p.velocity += dt * force;
+			p.size = Mathf.Abs(dist.w);
+			_particles[i] = p;
 		}
 		
 		_system.SetParticles(_particles, nParticles);

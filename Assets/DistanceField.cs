@@ -50,23 +50,23 @@ public class DistanceField : MonoBehaviour {
 	}
 	
 	public Vector4 distance(Vector3 point) {
-		float minSqrMagnitude = Mathf.Infinity;
-		Vector3 minDist = Vector3.zero;
+		float minSqrDist = Mathf.Infinity;
+		Vector3 point2nearestMesh = Vector3.zero;
 		int iMin = -1;
 		for (int i = 0; i < triVertsInLocal.Length; i++) {
 			Vector2[] triangle = triVertsInLocal[i];
 			Matrix4x4 m = transTriSpaces[i];
 			Vector3 pointInLocal = m.MultiplyPoint3x4(point);
-			Vector3 tmpDist = distanceInLocal(pointInLocal, triangle);
-			float tmpSqrMag = tmpDist.sqrMagnitude;
-			if (tmpSqrMag < minSqrMagnitude) {
-				minSqrMagnitude = tmpSqrMag;
-				minDist = tmpDist;
+			Vector3 point2meshInLocal = distanceInLocal(pointInLocal, triangle);
+			float tmpSqrDist = point2meshInLocal.sqrMagnitude;
+			if (tmpSqrDist < minSqrDist) {
+				minSqrDist = tmpSqrDist;
+				point2nearestMesh = point2meshInLocal;
 				iMin = i;
 			}
 		}
-		Vector4 distInWorld = transTriSpacesInv[iMin].MultiplyVector(minDist);
-		distInWorld.w = -minDist.z;
+		Vector4 distInWorld = transTriSpacesInv[iMin].MultiplyVector(point2nearestMesh);
+		distInWorld.w = (point2nearestMesh.z > 0 ? -1 : +1) * Mathf.Sqrt(minSqrDist);
 		return distInWorld;
 	}
 	public Vector3 distanceInLocal(Vector3 pointInLocal, Vector2[] triIn2d) {
