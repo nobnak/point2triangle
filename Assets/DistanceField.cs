@@ -15,23 +15,40 @@ public class DistanceField : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		MeshFilter targetMeshFlt = (MeshFilter)targetObj.GetComponent("MeshFilter");
-		Mesh targetMesh = targetMeshFlt.mesh;
-		Transform targetTrans = targetObj.transform;
-		Vector3[] verticesInWorld = (from v in targetMesh.vertices select targetTrans.TransformPoint(v)).ToArray();
-		int[] triIndices = targetMesh.triangles;
-		Vector3[][] triangles = (from tri in (from i in Enumerable.Range(0, triIndices.Length / 3) select 
-			new Vector3[]{ 
-				verticesInWorld[triIndices[3*i]],
-				verticesInWorld[triIndices[3*i+1]],
-				verticesInWorld[triIndices[3*i+2]] }) where Vector3.Cross(tri[1]-tri[0], tri[2]-tri[0]).sqrMagnitude > Mathf.Epsilon select tri).ToArray();
-		this.transTriSpaces = (from tri in triangles select calcTriangleSpace(tri)).ToArray();
+		var mf = (MeshFilter)targetObj.GetComponent("MeshFilter");
+		var mesh = mf.mesh;
+		var tr = targetObj.transform;
+		var vertices = (from v in mesh.vertices select tr.TransformPoint(v)).ToArray();
+		var triangles = mesh.triangles;
+		var triVertices = (from i in Enumerable.Range(0, triangles.Length / 3) 
+			select new Vector3[]{ vertices[triangles[3*i]],	vertices[triangles[3*i+1]], vertices[triangles[3*i+2]] }
+			).ToArray();
+
+		var angles = new float[triangles.Length];
+		for (var i = 0; i < triVertices.Length; i++) {
+			var tri = triVertices[i];
+			for (var j = 0; j < 3; j++) {
+				angles[3 * i + j] = Mathf.Acos(
+					Vector3.Dot( (tri[(j+1)%3]-tri[j]).normalized, (tri[(j-1)%3]-tri[j]).normalized ));
+			}
+		}
+		var normals = (from tri in triVertices select Vector3.Cross(tri[1]-tri[0], tri[2]-tri[0]).normalized).ToArray();
+		var vnormals = new Vector3[vertices.Length];
+		var enormals = new Dictionary<Edge, Vector3>();
+		for (var i = 0; i < triVertices.Length; i++) {
+			var tri = triVertices[i];
+			for (var j = 0; j < 3; j++) {
+
+			}
+		}
+
+		this.transTriSpaces = (from tri in triVertices select calcTriangleSpace(tri)).ToArray();
 		this.transTriSpacesInv = (from m in transTriSpaces select m.inverse).ToArray();
 		this.triVertsInLocal = (from i in Enumerable.Range(0, transTriSpaces.Length) select
 			new Vector2[]{
-				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][0]),
-				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][1]),
-				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triangles[i][2]) }).ToArray();
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triVertices[i][0]),
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triVertices[i][1]),
+				(Vector2)transTriSpaces[i].MultiplyPoint3x4(triVertices[i][2]) }).ToArray();
 	}
 
 	public Matrix4x4 calcTriangleSpace(Vector3[] triVerts) {
@@ -100,4 +117,27 @@ public class DistanceField : MonoBehaviour {
 		return p.x * e.y - p.y * e.x;
 	}
 
+	public struct Edge {
+		public int v0;
+		public int v1;
+
+		public Edge(int v0, int v1) {
+			if (v1 < v0) {
+				var tmp = v0; v0 = v1; v1 = tmp;
+			}
+			this.v0 = v0;
+			this.v1 = v1;
+		}
+
+		public override bool Equals (object obj) {
+			if (obj.GetType() != typeof(Edge))
+				return false;
+			var b = (Edge)obj;
+			return b.v0 == v0 && b.v1 == v1;
+		}
+
+		public override int GetHashCode () {
+			return 251 * (v0 + 137 * v1);
+		}
+	}
 }
