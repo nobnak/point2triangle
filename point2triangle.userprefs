@@ -1,16 +1,18 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace />
-  <MonoDevelop.Ide.Workbench ActiveDocument="..\ParticleSphere\PointMesh\Assets\Scripts\PixelVertices.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/DistanceField.cs">
     <Files>
-      <File FileName="..\ParticleSphere\PointMesh\Assets\Materials\Shaders\Bilateral Grid.shader" Line="42" Column="45" />
-      <File FileName="..\ParticleSphere\PointMesh\Assets\Materials\Shaders\Bilateral Filter.shader" Line="60" Column="53" />
-      <File FileName="..\ParticleSphere\PointMesh\Assets\Materials\Shaders\Bilateral Grid View.shader" Line="53" Column="1" />
-      <File FileName="..\ParticleSphere\PointMesh\Assets\Scripts\PixelVertices.cs" Line="53" Column="46" />
-      <File FileName="..\ParticleSphere\PointMesh\Assets\Materials\Shaders\BilateralCommon.cginc" Line="10" Column="28" />
+      <File FileName="Assets/DistanceField.cs" Line="62" Column="68" />
+      <File FileName="Assets/Normal.shader" Line="25" Column="61" />
+      <File FileName="Assets/Color.shader" Line="19" Column="11" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
-        <State expanded="True" />
+        <State expanded="True">
+          <Node name="Assembly-CSharp" expanded="True">
+            <Node name="DistanceField.cs" selected="True" />
+          </Node>
+        </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
