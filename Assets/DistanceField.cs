@@ -100,7 +100,7 @@ public class DistanceField : MonoBehaviour {
 		}
 		Vector4 p2m = transTriSpacesInv[iMin].MultiplyVector(p2mInLoal);
 		p2m.w = (Vector3.Dot((Vector3)p2m, normal) > 0 ? -1 : +1) * Mathf.Sqrt(minSqrDist);
-		UnityEngine.Debug.Log(string.Format("{0}:n={1},p2m={2}", ftr, normal, p2m));
+		//UnityEngine.Debug.Log(string.Format("{0}:n={1},p2m={2}", ftr, normal, p2m));
 		return p2m;
 	}
 	public Vector3 distanceInLocal(Vector3 pointInLocal, int iTriangle, out Vector3 normal, out Feature ftr) {
