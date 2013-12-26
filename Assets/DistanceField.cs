@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 
+[ExecuteInEditMode]
 public class DistanceField : MonoBehaviour {
 	public enum Feature { Vertex, Edge, Face };
 
@@ -18,9 +19,9 @@ public class DistanceField : MonoBehaviour {
 	private Dictionary<Edge, Vector3> enormals;
 
 	// Use this for initialization
-	void Start () {
+	void OnEnable () {
 		var mf = GetComponent<MeshFilter>();
-		var mesh = mf.mesh;
+		var mesh = mf.sharedMesh;
 		var tr = transform;
 		var vertices = (from v in mesh.vertices select tr.TransformPoint(v)).ToArray();
 		triangles = mesh.triangles;
